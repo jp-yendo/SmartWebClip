@@ -15,7 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - RSS/Atom feed monitoring
   - HTML standard (full page body) change detection
   - HTML custom (CSS selector-based) change detection
-- Automatic thumbnail fetching from Open Graph images
+- Smart thumbnail fetching with multiple strategies:
+  - Open Graph images (og:image, twitter:image)
+  - Favicon as fallback
+  - Automatic content-type validation and file size limiting
 - Multi-language support (English and Japanese)
 - Cross-platform support (Windows, macOS, Linux, Android, iOS)
 - Local SQLite database for data storage

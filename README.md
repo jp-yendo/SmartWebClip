@@ -12,7 +12,8 @@ A cross-platform web update monitoring application that helps you track changes 
 
 ### 📋 URL Management
 - Add and organize your favorite web pages
-- Auto-fetch page titles and thumbnails
+- Auto-fetch page titles
+- Smart thumbnail fetching (Open Graph images, favicons)
 - Support for RSS feeds and HTML change detection
 - Categorize URLs into collections
 - Bulk operations (add to collection, delete)
