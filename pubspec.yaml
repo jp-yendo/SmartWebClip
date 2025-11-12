@@ -25,13 +25,11 @@ dependencies:
   # HTTP & Web scraping
   http: ^1.1.0
   html: ^0.15.4
-  webfeed: ^0.7.0
+  webfeed_plus: ^2.0.0
   crypto: ^3.0.3
 
   # Screenshot/Thumbnail
-  webview_flutter: ^4.4.0
-  webview_flutter_android: ^3.12.0
-  webview_flutter_wkwebview: ^3.9.0
+  webview_universal_plus: ^0.1.0
   image: ^4.1.0
 
   # UI

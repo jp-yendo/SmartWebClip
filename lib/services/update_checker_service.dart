@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
-import 'package:webfeed/webfeed.dart';
+import 'package:webfeed_plus/webfeed_plus.dart';
 import '../models/url_item.dart';
 import 'database_service.dart';
 

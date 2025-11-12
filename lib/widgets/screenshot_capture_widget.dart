@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_universal_plus/webview_universal_plus.dart';
 
 /// Widget that captures a screenshot of a web page
 /// Shows a loading mask while the page loads
