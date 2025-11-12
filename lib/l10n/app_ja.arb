@@ -1,0 +1,96 @@
+{
+  "@@locale": "ja",
+  "appTitle": "Smart Web Clip",
+
+  "home": "ホーム",
+  "collections": "コレクション",
+  "settings": "設定",
+  "all": "すべて",
+  "uncategorized": "未整理",
+
+  "addUrl": "URL追加",
+  "editUrl": "URL編集",
+  "deleteUrl": "URL削除",
+  "url": "URL",
+  "title": "タイトル",
+  "thumbnail": "サムネイル",
+  "retakeThumbnail": "サムネイル再取得",
+
+  "checkType": "チェックタイプ",
+  "checkTypeRss": "RSS",
+  "checkTypeHtmlStandard": "HTML（標準）",
+  "checkTypeHtmlCustom": "HTML（カスタム）",
+
+  "htmlSelector": "HTMLセレクタ",
+  "htmlCustomCondition": "カスタム条件",
+  "conditionOr": "OR（いずれか変更）",
+  "conditionAnd": "AND（すべて変更）",
+
+  "lastUpdated": "最終更新",
+  "lastChecked": "最終チェック",
+  "neverChecked": "未チェック",
+  "today": "今日",
+  "yesterday": "昨日",
+  "daysAgo": "{days}日前",
+  "hoursAgo": "{hours}時間前",
+  "minutesAgo": "{minutes}分前",
+  "justNow": "たった今",
+
+  "addCollection": "コレクション追加",
+  "editCollection": "コレクション編集",
+  "deleteCollection": "コレクション削除",
+  "collectionName": "コレクション名",
+  "addToCollection": "コレクションに追加",
+  "removeFromCollection": "コレクションから削除",
+  "createNewCollection": "新規コレクション作成",
+
+  "save": "保存",
+  "cancel": "キャンセル",
+  "delete": "削除",
+  "add": "追加",
+  "edit": "編集",
+  "search": "検索",
+  "sort": "ソート",
+  "filter": "フィルター",
+
+  "sortByUpdated": "更新日時順",
+  "sortByAdded": "追加日時順",
+  "sortByTitle": "タイトル順",
+  "ascending": "昇順",
+  "descending": "降順",
+
+  "checkForUpdates": "更新をチェック",
+  "checkingUpdates": "更新をチェック中...",
+  "updateCheckComplete": "更新チェック完了",
+
+  "language": "言語",
+  "languageEnglish": "English",
+  "languageJapanese": "日本語",
+  "selectLanguage": "言語を選択",
+
+  "confirmDelete": "削除の確認",
+  "confirmDeleteUrl": "このURLを削除してもよろしいですか？",
+  "confirmDeleteCollection": "このコレクションを削除してもよろしいですか？",
+  "confirmDeleteUrls": "{count}個のURLを削除してもよろしいですか？",
+
+  "error": "エラー",
+  "errorOccurred": "エラーが発生しました",
+  "errorFetchingUrl": "URLの取得エラー",
+  "errorInvalidUrl": "無効なURL",
+  "errorEmptyTitle": "タイトルを入力してください",
+  "errorEmptyUrl": "URLを入力してください",
+
+  "selected": "選択中",
+  "selectAll": "すべて選択",
+  "deselectAll": "選択解除",
+  "bulkActions": "一括操作",
+
+  "noUrlsYet": "まだURLがありません",
+  "noUrlsInCollection": "このコレクションにはURLがありません",
+  "addYourFirstUrl": "最初のURLを追加してください",
+
+  "active": "有効",
+  "inactive": "無効",
+  "errorCount": "エラー回数",
+  "lastError": "最後のエラー"
+}
