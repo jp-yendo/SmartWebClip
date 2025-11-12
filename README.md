@@ -13,7 +13,10 @@ A cross-platform web update monitoring application that helps you track changes 
 ### 📋 URL Management
 - Add and organize your favorite web pages
 - Auto-fetch page titles
-- Smart thumbnail fetching (Open Graph images, favicons)
+- Smart high-quality thumbnail fetching:
+  - Open Graph images (256-512px optimal range)
+  - PWA manifest icons with resolution validation
+  - Optional WebView screenshot (platform-dependent)
 - Support for RSS feeds and HTML change detection
 - Categorize URLs into collections
 - Bulk operations (add to collection, delete)
