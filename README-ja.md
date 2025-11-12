@@ -124,10 +124,10 @@ flutter run -d <device>
 
 ## ドキュメント
 
-- [開発環境のセットアップ](Documents/DEVELOPMENT_SETUP.md)
-- [ビルドとリリースガイド](Documents/BUILD_AND_RELEASE.md)
-- [システム要件](Documents/SYSTEM_REQUIREMENTS.md)
-- [テストガイド](Documents/TESTING.md)
+- [開発環境のセットアップ](Documents/DEVELOPMENT_SETUP-ja.md) | [English](Documents/DEVELOPMENT_SETUP.md)
+- [ビルドとリリースガイド](Documents/BUILD_AND_RELEASE-ja.md) | [English](Documents/BUILD_AND_RELEASE.md)
+- [システム要件](Documents/SYSTEM_REQUIREMENTS-ja.md) | [English](Documents/SYSTEM_REQUIREMENTS.md)
+- [テストガイド](Documents/TESTING-ja.md) | [English](Documents/TESTING.md)
 
 ## 技術スタック
 

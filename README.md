@@ -124,10 +124,10 @@ See [SYSTEM_REQUIREMENTS.md](Documents/SYSTEM_REQUIREMENTS.md) for detailed requ
 
 ## Documentation
 
-- [Development Setup](Documents/DEVELOPMENT_SETUP.md)
-- [Build and Release Guide](Documents/BUILD_AND_RELEASE.md)
-- [System Requirements](Documents/SYSTEM_REQUIREMENTS.md)
-- [Testing Guide](Documents/TESTING.md)
+- [Development Setup](Documents/DEVELOPMENT_SETUP.md) | [日本語](Documents/DEVELOPMENT_SETUP-ja.md)
+- [Build and Release Guide](Documents/BUILD_AND_RELEASE.md) | [日本語](Documents/BUILD_AND_RELEASE-ja.md)
+- [System Requirements](Documents/SYSTEM_REQUIREMENTS.md) | [日本語](Documents/SYSTEM_REQUIREMENTS-ja.md)
+- [Testing Guide](Documents/TESTING.md) | [日本語](Documents/TESTING-ja.md)
 
 ## Technology Stack
 
