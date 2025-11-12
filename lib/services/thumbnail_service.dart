@@ -2,24 +2,27 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
 import 'package:image/image.dart' as img;
+import '../widgets/screenshot_capture_widget.dart';
 
 class ThumbnailService {
   /// Captures a thumbnail screenshot of the given URL
   /// Strategy:
   /// 1. Try Open Graph images (no size restriction)
   /// 2. Try PWA manifest icons (256-512px range, resize if >512px)
-  /// 3. Try WebView screenshot (platform-dependent)
+  /// 3. Try WebView screenshot (if BuildContext provided)
   /// 4. Return null if all fail (best effort)
   ///
+  /// [context] is optional. If provided, enables WebView screenshot as fallback.
   /// Returns the file path if successful, null otherwise
-  Future<String?> captureThumbnail(String url) async {
+  Future<String?> captureThumbnail(String url, {BuildContext? context}) async {
     try {
       // Strategy 1: Try Open Graph images (no size check)
       final ogImageUrl = await _getOpenGraphImage(url);
@@ -42,10 +45,12 @@ class ThumbnailService {
         }
       }
 
-      // Strategy 3: Try WebView screenshot (platform-dependent)
-      final screenshotPath = await _captureWebViewScreenshot(url);
-      if (screenshotPath != null) {
-        return screenshotPath;
+      // Strategy 3: Try WebView screenshot (if context provided)
+      if (context != null && context.mounted) {
+        final screenshotPath = await _captureWebViewScreenshot(url, context);
+        if (screenshotPath != null) {
+          return screenshotPath;
+        }
       }
 
       // All strategies failed
@@ -251,88 +256,67 @@ class ThumbnailService {
     return bestInRange ?? bestLarge;
   }
 
-  /// Capture screenshot using WebView (platform-dependent)
-  /// Works on most platforms but may have limitations
-  Future<String?> _captureWebViewScreenshot(String url) async {
-    // Note: HeadlessInAppWebView has platform-specific limitations
-    // - Desktop platforms (Windows, macOS, Linux): May not be fully supported
-    // - Mobile platforms (Android, iOS): Should work but requires testing
-    //
-    // For now, we return null as the implementation is complex and
-    // platform-dependent. This can be implemented as an optional feature later.
-
-    // Uncomment and test the following implementation on your target platform:
-    /*
+  /// Capture screenshot using WebView with visual feedback
+  /// Shows a loading mask while capturing the screenshot
+  /// Works on all platforms supported by webview_flutter
+  Future<String?> _captureWebViewScreenshot(
+      String url, BuildContext context) async {
     try {
-      final completer = Completer<String?>();
-      HeadlessInAppWebView? headlessWebView;
+      final completer = Completer<ui.Image?>();
+      OverlayEntry? overlayEntry;
 
-      headlessWebView = HeadlessInAppWebView(
-        initialUrlRequest: URLRequest(url: WebUri(url)),
-        initialSettings: InAppWebViewSettings(
-          javaScriptEnabled: true,
-          cacheEnabled: false,
+      // Show the screenshot capture widget as an overlay
+      overlayEntry = OverlayEntry(
+        builder: (context) => ScreenshotCaptureWidget(
+          url: url,
+          onCaptureComplete: (image) {
+            completer.complete(image);
+            overlayEntry?.remove();
+          },
         ),
-        onLoadStop: (controller, url) async {
-          try {
-            // Wait for page to render
-            await Future.delayed(const Duration(seconds: 2));
-
-            // Take screenshot
-            final screenshot = await controller.takeScreenshot(
-              screenshotConfiguration: ScreenshotConfiguration(
-                compressFormat: CompressFormat.JPEG,
-                quality: 80,
-              ),
-            );
-
-            if (screenshot != null) {
-              // Save screenshot
-              final dir = await getApplicationDocumentsDirectory();
-              final thumbnailDir = Directory(path.join(dir.path, 'thumbnails'));
-              if (!await thumbnailDir.exists()) {
-                await thumbnailDir.create(recursive: true);
-              }
-
-              final timestamp = DateTime.now().millisecondsSinceEpoch;
-              final fileName = 'screenshot_$timestamp.jpg';
-              final filePath = path.join(thumbnailDir.path, fileName);
-
-              final file = File(filePath);
-              await file.writeAsBytes(screenshot);
-
-              completer.complete(filePath);
-            } else {
-              completer.complete(null);
-            }
-          } catch (e) {
-            completer.complete(null);
-          } finally {
-            await headlessWebView?.dispose();
-          }
-        },
-        onLoadError: (controller, url, code, message) async {
-          completer.complete(null);
-          await headlessWebView?.dispose();
-        },
       );
 
-      await headlessWebView.run();
+      Overlay.of(context).insert(overlayEntry);
 
-      // Wait for result with timeout
-      return await completer.future.timeout(
-        const Duration(seconds: 10),
+      // Wait for capture to complete with timeout
+      final image = await completer.future.timeout(
+        const Duration(seconds: 30),
         onTimeout: () {
-          headlessWebView?.dispose();
+          overlayEntry?.remove();
           return null;
         },
       );
+
+      if (image == null) {
+        return null;
+      }
+
+      // Convert ui.Image to PNG bytes
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        return null;
+      }
+
+      final pngBytes = byteData.buffer.asUint8List();
+
+      // Save to file
+      final dir = await getApplicationDocumentsDirectory();
+      final thumbnailDir = Directory(path.join(dir.path, 'thumbnails'));
+      if (!await thumbnailDir.exists()) {
+        await thumbnailDir.create(recursive: true);
+      }
+
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'screenshot_$timestamp.png';
+      final filePath = path.join(thumbnailDir.path, fileName);
+
+      final file = File(filePath);
+      await file.writeAsBytes(pngBytes);
+
+      return filePath;
     } catch (e) {
       return null;
     }
-    */
-
-    return null;
   }
 
   /// Resolve relative URL to absolute URL

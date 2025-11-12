@@ -96,13 +96,17 @@ class UrlProvider with ChangeNotifier {
     CheckType checkType = CheckType.htmlStandard,
     String? htmlSelector,
     HtmlCustomCondition? htmlCustomCondition,
+    BuildContext? context,
   }) async {
     try {
       // Fetch title if not provided
       final finalTitle = title ?? await _webScraper.fetchTitle(url);
 
-      // Capture thumbnail (best effort)
-      final thumbnailPath = await _thumbnailService.captureThumbnail(url);
+      // Capture thumbnail (best effort, with WebView fallback if context provided)
+      final thumbnailPath = await _thumbnailService.captureThumbnail(
+        url,
+        context: context,
+      );
 
       final urlItem = UrlItem(
         url: url,
@@ -165,7 +169,7 @@ class UrlProvider with ChangeNotifier {
     }
   }
 
-  Future<void> retakeThumbnail(String id) async {
+  Future<void> retakeThumbnail(String id, {BuildContext? context}) async {
     try {
       final urlItem = await _dbService.getUrlItem(id);
       if (urlItem == null) return;
@@ -175,9 +179,11 @@ class UrlProvider with ChangeNotifier {
         await _thumbnailService.deleteThumbnail(urlItem.thumbnailPath);
       }
 
-      // Capture new thumbnail
-      final newThumbnailPath =
-          await _thumbnailService.captureThumbnail(urlItem.url);
+      // Capture new thumbnail (with WebView fallback if context provided)
+      final newThumbnailPath = await _thumbnailService.captureThumbnail(
+        urlItem.url,
+        context: context,
+      );
 
       final updatedItem = urlItem.copyWith(
         thumbnailPath: newThumbnailPath,

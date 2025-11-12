@@ -320,7 +320,10 @@ class _EditUrlScreenState extends State<EditUrlScreen> {
     });
 
     try {
-      await context.read<UrlProvider>().retakeThumbnail(widget.urlItem.id);
+      await context.read<UrlProvider>().retakeThumbnail(
+        widget.urlItem.id,
+        context: context,
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -215,6 +215,7 @@ class _AddUrlScreenState extends State<AddUrlScreen> {
         htmlCustomCondition: _checkType == CheckType.htmlCustom
             ? _htmlCustomCondition
             : null,
+        context: context,
       );
 
       if (mounted) {
