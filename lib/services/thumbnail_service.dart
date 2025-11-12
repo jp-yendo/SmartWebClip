@@ -1,26 +1,28 @@
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' as html_parser;
+import 'package:image/image.dart' as img;
 
 class ThumbnailService {
   /// Captures a thumbnail screenshot of the given URL
   /// Strategy:
-  /// 1. Try Open Graph images (256px+ resolution, prefer up to 512px)
-  /// 2. Try PWA manifest icons (same resolution criteria)
+  /// 1. Try Open Graph images (no size restriction)
+  /// 2. Try PWA manifest icons (256-512px range, resize if >512px)
   /// 3. Try WebView screenshot (platform-dependent)
   /// 4. Return null if all fail (best effort)
   ///
   /// Returns the file path if successful, null otherwise
   Future<String?> captureThumbnail(String url) async {
     try {
-      // Strategy 1: Try Open Graph images with resolution check
-      final ogImageUrl = await _getBestOpenGraphImage(url);
+      // Strategy 1: Try Open Graph images (no size check)
+      final ogImageUrl = await _getOpenGraphImage(url);
       if (ogImageUrl != null) {
         final imagePath = await _downloadAndValidateImage(ogImageUrl);
         if (imagePath != null) {
@@ -28,10 +30,13 @@ class ThumbnailService {
         }
       }
 
-      // Strategy 2: Try PWA manifest icons
-      final pwaIconUrl = await _getBestPWAIcon(url);
-      if (pwaIconUrl != null) {
-        final imagePath = await _downloadAndValidateImage(pwaIconUrl);
+      // Strategy 2: Try PWA manifest icons (with size filtering and resize)
+      final pwaResult = await _getBestPWAIcon(url);
+      if (pwaResult != null) {
+        final imagePath = await _downloadAndValidateImage(
+          pwaResult['url']!,
+          needsResize: pwaResult['resize'] == true,
+        );
         if (imagePath != null) {
           return imagePath;
         }
@@ -51,11 +56,9 @@ class ThumbnailService {
     }
   }
 
-  /// Get the best Open Graph image URL that meets resolution criteria
-  /// - Must be 256px or larger
-  /// - Prefer images up to 512px
-  /// - Return the highest resolution within acceptable range
-  Future<String?> _getBestOpenGraphImage(String url) async {
+  /// Get Open Graph image URL (no size restriction)
+  /// Simply returns the first available OG image
+  Future<String?> _getOpenGraphImage(String url) async {
     try {
       final response = await http.get(
         Uri.parse(url),
@@ -70,53 +73,35 @@ class ThumbnailService {
       }
 
       final document = html_parser.parse(response.body);
-      final List<Map<String, dynamic>> candidates = [];
 
-      // Collect og:image candidates
-      final ogImages = document.querySelectorAll('meta[property="og:image"]');
-      for (final meta in ogImages) {
-        final content = meta.attributes['content'];
+      // Try og:image
+      final ogImage = document.querySelector('meta[property="og:image"]');
+      if (ogImage != null) {
+        final content = ogImage.attributes['content'];
         if (content != null && content.isNotEmpty) {
-          candidates.add({
-            'url': _resolveUrl(url, content),
-            'width': _extractMetaProperty(document, 'og:image:width'),
-            'height': _extractMetaProperty(document, 'og:image:height'),
-          });
+          return _resolveUrl(url, content);
         }
       }
 
-      // Collect twitter:image candidates
-      final twitterImages =
-          document.querySelectorAll('meta[name="twitter:image"]');
-      for (final meta in twitterImages) {
-        final content = meta.attributes['content'];
+      // Try twitter:image
+      final twitterImage = document.querySelector('meta[name="twitter:image"]');
+      if (twitterImage != null) {
+        final content = twitterImage.attributes['content'];
         if (content != null && content.isNotEmpty) {
-          candidates.add({
-            'url': _resolveUrl(url, content),
-            'width': _extractMetaProperty(document, 'twitter:image:width'),
-            'height': _extractMetaProperty(document, 'twitter:image:height'),
-          });
+          return _resolveUrl(url, content);
         }
       }
 
-      // Find best candidate based on resolution
-      return await _selectBestImageCandidate(candidates);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Extract meta property value as integer
-  int? _extractMetaProperty(dynamic document, String property) {
-    try {
-      final meta = document.querySelector('meta[property="$property"]') ??
-          document.querySelector('meta[name="$property"]');
-      if (meta != null) {
-        final content = meta.attributes['content'];
-        if (content != null) {
-          return int.tryParse(content);
+      // Try twitter:image:src
+      final twitterImageSrc =
+          document.querySelector('meta[name="twitter:image:src"]');
+      if (twitterImageSrc != null) {
+        final content = twitterImageSrc.attributes['content'];
+        if (content != null && content.isNotEmpty) {
+          return _resolveUrl(url, content);
         }
       }
+
       return null;
     } catch (e) {
       return null;
@@ -124,7 +109,11 @@ class ThumbnailService {
   }
 
   /// Get the best PWA manifest icon that meets resolution criteria
-  Future<String?> _getBestPWAIcon(String url) async {
+  /// Returns a map with 'url' and 'resize' flag
+  /// - Prefers icons between 256-512px
+  /// - If only >512px available, returns with resize flag
+  /// - Returns null if no suitable icons (<256px are skipped)
+  Future<Map<String, dynamic>?> _getBestPWAIcon(String url) async {
     try {
       final response = await http.get(
         Uri.parse(url),
@@ -203,89 +192,63 @@ class ThumbnailService {
         });
       }
 
-      return await _selectBestImageCandidate(candidates);
+      return _selectBestPWAIcon(candidates);
     } catch (e) {
       return null;
     }
   }
 
-  /// Select the best image candidate based on resolution criteria
-  /// - Must be 256px or larger (both width and height)
-  /// - Prefer images up to 512px
-  /// - Return the highest resolution within acceptable range
-  Future<String?> _selectBestImageCandidate(
-      List<Map<String, dynamic>> candidates) async {
+  /// Select the best PWA icon based on size criteria
+  /// - Prefer 256-512px range (no resize needed)
+  /// - If none in range, select best >512px (needs resize)
+  /// - Skip <256px (too small)
+  Map<String, dynamic>? _selectBestPWAIcon(
+      List<Map<String, dynamic>> candidates) {
     if (candidates.isEmpty) return null;
 
-    Map<String, dynamic>? bestCandidate;
-    int bestSize = 0;
+    Map<String, dynamic>? bestInRange;
+    Map<String, dynamic>? bestLarge;
+    int bestInRangeSize = 0;
+    int bestLargeSize = 0;
 
     for (final candidate in candidates) {
       final url = candidate['url'] as String?;
       if (url == null) continue;
 
-      int? width = candidate['width'] as int?;
-      int? height = candidate['height'] as int?;
+      final width = candidate['width'] as int?;
+      final height = candidate['height'] as int?;
 
-      // If dimensions not specified, try to fetch and check
-      if (width == null || height == null) {
-        final dimensions = await _getImageDimensions(url);
-        if (dimensions != null) {
-          width = dimensions['width'];
-          height = dimensions['height'];
-        }
-      }
-
-      // Skip if we still don't have dimensions
+      // Skip if dimensions not available
       if (width == null || height == null) continue;
 
-      // Check minimum size requirement (256px)
-      if (width < 256 || height < 256) continue;
-
-      // Calculate size score (prefer images up to 512px)
       final minDimension = width < height ? width : height;
-      int sizeScore;
+
+      // Skip if too small
+      if (minDimension < 256) continue;
 
       if (minDimension <= 512) {
-        // Prefer images up to 512px (higher is better)
-        sizeScore = minDimension;
+        // In optimal range (256-512px)
+        if (minDimension > bestInRangeSize) {
+          bestInRangeSize = minDimension;
+          bestInRange = {
+            'url': url,
+            'resize': false,
+          };
+        }
       } else {
-        // Images larger than 512px are acceptable but not preferred
-        // Give them a lower score
-        sizeScore = 512 - (minDimension - 512) ~/ 10;
-      }
-
-      if (sizeScore > bestSize) {
-        bestSize = sizeScore;
-        bestCandidate = candidate;
+        // Larger than 512px (will need resize)
+        if (minDimension > bestLargeSize) {
+          bestLargeSize = minDimension;
+          bestLarge = {
+            'url': url,
+            'resize': true,
+          };
+        }
       }
     }
 
-    return bestCandidate?['url'] as String?;
-  }
-
-  /// Get image dimensions from URL
-  Future<Map<String, int>?> _getImageDimensions(String imageUrl) async {
-    try {
-      final response = await http.head(
-        Uri.parse(imageUrl),
-        headers: {
-          'User-Agent':
-              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
-      ).timeout(const Duration(seconds: 5));
-
-      if (response.statusCode != 200) {
-        return null;
-      }
-
-      // Try to get dimensions from Content-Length if image is small enough
-      // For now, return null as we'd need to download the image to get dimensions
-      // This is acceptable as most modern sites provide dimensions in meta tags
-      return null;
-    } catch (e) {
-      return null;
-    }
+    // Prefer icons in optimal range
+    return bestInRange ?? bestLarge;
   }
 
   /// Capture screenshot using WebView (platform-dependent)
@@ -405,7 +368,11 @@ class ThumbnailService {
   }
 
   /// Download and validate image
-  Future<String?> _downloadAndValidateImage(String imageUrl) async {
+  /// If needsResize is true, resize to max 512px on longest side
+  Future<String?> _downloadAndValidateImage(
+    String imageUrl, {
+    bool needsResize = false,
+  }) async {
     try {
       final response = await http.get(
         Uri.parse(imageUrl),
@@ -430,6 +397,13 @@ class ThumbnailService {
         return null;
       }
 
+      Uint8List imageBytes = response.bodyBytes;
+
+      // Resize if needed
+      if (needsResize) {
+        imageBytes = await _resizeImage(imageBytes);
+      }
+
       final dir = await getApplicationDocumentsDirectory();
       final thumbnailDir = Directory(path.join(dir.path, 'thumbnails'));
       if (!await thumbnailDir.exists()) {
@@ -443,11 +417,52 @@ class ThumbnailService {
       final filePath = path.join(thumbnailDir.path, fileName);
 
       final file = File(filePath);
-      await file.writeAsBytes(response.bodyBytes);
+      await file.writeAsBytes(imageBytes);
 
       return filePath;
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Resize image so longest side is max 512px
+  Future<Uint8List> _resizeImage(Uint8List imageBytes) async {
+    try {
+      // Decode image
+      final image = img.decodeImage(imageBytes);
+      if (image == null) return imageBytes;
+
+      // Check if resize is needed
+      final maxDimension = image.width > image.height ? image.width : image.height;
+      if (maxDimension <= 512) return imageBytes;
+
+      // Calculate new dimensions
+      int newWidth;
+      int newHeight;
+
+      if (image.width > image.height) {
+        // Width is longer
+        newWidth = 512;
+        newHeight = (image.height * 512 / image.width).round();
+      } else {
+        // Height is longer
+        newHeight = 512;
+        newWidth = (image.width * 512 / image.height).round();
+      }
+
+      // Resize
+      final resized = img.copyResize(
+        image,
+        width: newWidth,
+        height: newHeight,
+        interpolation: img.Interpolation.linear,
+      );
+
+      // Encode as JPEG
+      return Uint8List.fromList(img.encodeJpg(resized, quality: 85));
+    } catch (e) {
+      // If resize fails, return original
+      return imageBytes;
     }
   }
 
